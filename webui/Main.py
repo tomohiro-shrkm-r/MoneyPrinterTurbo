@@ -42,7 +42,7 @@ hide_streamlit_style = """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 st.title(f"MoneyPrinterTurbo v{config.project_version}")
 
-support_locales = ["zh-CN", "zh-HK", "zh-TW", "de-DE", "en-US", "fr-FR", "vi-VN", "th-TH", "ja-JP"]
+support_locales = ["en-US", "ja-JP", "es-ES"]
 
 font_dir = os.path.join(root_dir, "resource", "fonts")
 song_dir = os.path.join(root_dir, "resource", "songs")
