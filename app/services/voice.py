@@ -15,7 +15,36 @@ from app.utils import utils
 
 def get_all_azure_voices(filter_locals=None) -> list[str]:
     if filter_locals is None:
-        filter_locals = ["zh-CN", "en-US", "zh-HK", "zh-TW", "vi-VN"]
+        filter_locals = ["zh-CN", "en-US", "zh-HK", "zh-TW", "vi-VN", "ja-JP"]
+# Note: 
+# https://learn.microsoft.com/ja-jp/azure/ai-services/speech-service/language-support?tabs=tts
+# ja-JP-AoiNeural (女性)
+# ja-JP-DaichiNeural (男性)
+# ja-JP-MayuNeural (女性)
+# ja-JP-NaokiNeural (男性)
+# ja-JP-ShioriNeural (女性)
+# ja-JP-MasaruMultilingualNeural1、3 (男性)
+
+# Name: ja-JP-AoiNeural 
+# Gender: Female
+
+# Name: ja-JP-DaichiNeural 
+# Gender: Male
+
+# Name: ja-JP-MayuNeural 
+# Gender: Female
+
+# Name: ja-JP-NaokiNeural 
+# Gender: Male
+
+# Name: ja-JP-ShioriNeural 
+# Gender: Female
+
+# Name: ja-JP-MasaruMultilingualNeural
+# Gender: Male
+
+
+
     voices_str = """
 Name: af-ZA-AdriNeural
 Gender: Female
