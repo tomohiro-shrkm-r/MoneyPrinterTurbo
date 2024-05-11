@@ -15,7 +15,7 @@ from app.utils import utils
 
 def get_all_azure_voices(filter_locals=None) -> list[str]:
     if filter_locals is None:
-        filter_locals = ["zh-CN", "en-US", "zh-HK", "zh-TW", "vi-VN", "ja-JP"]
+        filter_locals = ["en-US", "ja-JP", "es-ES"]
 # Note: 
 # https://learn.microsoft.com/ja-jp/azure/ai-services/speech-service/language-support?tabs=tts
 # ja-JP-AoiNeural (女性)
@@ -643,6 +643,9 @@ Gender: Male
 Name: ja-JP-NanamiNeural
 Gender: Female
 
+Name: ja-JP-DaichiNeural
+Gender: Male
+
 Name: jv-ID-DimasNeural
 Gender: Male
 
@@ -1063,6 +1066,7 @@ def tts(text: str, voice_name: str, voice_file: str) -> [SubMaker, None]:
     return azure_tts_v1(text, voice_name, voice_file)
 
 
+# TODO: 調査する。なぜkeitaとnanamiが行けて、ほかがだめなのか。
 def azure_tts_v1(text: str, voice_name: str, voice_file: str) -> [SubMaker, None]:
     text = text.strip()
     for i in range(3):
