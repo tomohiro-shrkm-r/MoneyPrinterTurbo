@@ -1068,6 +1068,7 @@ def tts(text: str, voice_name: str, voice_file: str) -> [SubMaker, None]:
 
 # TODO: 調査する。なぜkeitaとnanamiが行けて、ほかがだめなのか。
 def azure_tts_v1(text: str, voice_name: str, voice_file: str) -> [SubMaker, None]:
+    voice_name = parse_voice_name(voice_name)
     text = text.strip()
     for i in range(3):
         try:

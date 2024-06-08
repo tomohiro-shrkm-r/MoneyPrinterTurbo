@@ -183,7 +183,8 @@ if not config.app.get("hide_config", False):
             #   qwen (通义千问)
             #   gemini
             #   ollama
-            llm_providers = ['OpenAI', 'Moonshot', 'Azure', 'Qwen', 'Gemini', 'Ollama', 'G4f', 'OneAPI', "Cloudflare"]
+            llm_providers = ['OpenAI', 'Moonshot', 'Azure', 'Qwen', 'DeepSeek', 'Gemini', 'Ollama', 'G4f', 'OneAPI',
+                             "Cloudflare"]
             saved_llm_provider = config.app.get("llm_provider", "OpenAI").lower()
             saved_llm_provider_index = 0
             for i, provider in enumerate(llm_providers):
@@ -286,7 +287,22 @@ if not config.app.get("hide_config", False):
                            - **Model Name**: 比如 gemini-1.0-pro
                            """
 
+            if llm_provider == 'deepseek':
+                if not llm_model_name:
+                    llm_model_name = "deepseek-chat"
+                if not llm_base_url:
+                    llm_base_url = "https://api.deepseek.com"
+                with llm_helper:
+                    tips = """
+                           ##### DeepSeek 配置说明
+                           - **API Key**: [点击到官网申请](https://platform.deepseek.com/api_keys)
+                           - **Base Url**: 固定为 https://api.deepseek.com
+                           - **Model Name**: 固定为 deepseek-chat
+                           """
+
             if tips and config.ui['language'] == 'zh':
+                st.warning(
+                    "中国用户建议使用 **DeepSeek** 或 **Moonshot** 作为大模型提供商\n- 国内可直接访问，不需要VPN \n- 注册就送额度，基本够用")
                 st.info(tips)
 
             st_llm_api_key = st.text_input(tr("API Key"), value=llm_api_key, type="password")
@@ -306,15 +322,27 @@ if not config.app.get("hide_config", False):
                     config.app[f"{llm_provider}_account_id"] = st_llm_account_id
 
         with right_config_panel:
-            pexels_api_keys = config.app.get("pexels_api_keys", [])
-            if isinstance(pexels_api_keys, str):
-                pexels_api_keys = [pexels_api_keys]
-            pexels_api_key = ", ".join(pexels_api_keys)
+            def get_keys_from_config(cfg_key):
+                api_keys = config.app.get(cfg_key, [])
+                if isinstance(api_keys, str):
+                    api_keys = [api_keys]
+                api_key = ", ".join(api_keys)
+                return api_key
 
+
+            def save_keys_to_config(cfg_key, value):
+                value = value.replace(" ", "")
+                if value:
+                    config.app[cfg_key] = value.split(",")
+
+
+            pexels_api_key = get_keys_from_config("pexels_api_keys")
             pexels_api_key = st.text_input(tr("Pexels API Key"), value=pexels_api_key, type="password")
-            pexels_api_key = pexels_api_key.replace(" ", "")
-            if pexels_api_key:
-                config.app["pexels_api_keys"] = pexels_api_key.split(",")
+            save_keys_to_config("pexels_api_keys", pexels_api_key)
+
+            pixabay_api_key = get_keys_from_config("pixabay_api_keys")
+            pixabay_api_key = st.text_input(tr("Pixabay API Key"), value=pixabay_api_key, type="password")
+            save_keys_to_config("pixabay_api_keys", pixabay_api_key)
 
 panel = st.columns(3)
 left_panel = panel[0]
@@ -378,16 +406,24 @@ with middle_panel:
         ]
         video_sources = [
             (tr("Pexels"), "pexels"),
+            (tr("Pixabay"), "pixabay"),
             (tr("Local file"), "local"),
             (tr("TikTok"), "douyin"),
             (tr("Bilibili"), "bilibili"),
             (tr("Xiaohongshu"), "xiaohongshu"),
         ]
+
+        saved_video_source_name = config.app.get("video_source", "pexels")
+        saved_video_source_index = [v[1] for v in video_sources].index(saved_video_source_name)
+
         selected_index = st.selectbox(tr("Video Source"),
-                                      options=range(len(video_sources)),  # 使用索引作为内部选项值
-                                      format_func=lambda x: video_sources[x][0]  # 显示给用户的是标签
+                                      options=range(len(video_sources)),
+                                      format_func=lambda x: video_sources[x][0],
+                                      index=saved_video_source_index
                                       )
         params.video_source = video_sources[selected_index][1]
+        config.app["video_source"] = params.video_source
+
         if params.video_source == 'local':
             _supported_types = FILE_TYPE_VIDEOS + FILE_TYPE_IMAGES
             uploaded_files = st.file_uploader("Upload Local Files",
@@ -416,6 +452,10 @@ with middle_panel:
                                           index=0)
     with st.container(border=True):
         st.write(tr("Audio Settings"))
+
+        # tts_providers = ['edge', 'azure']
+        # tts_provider = st.selectbox(tr("TTS Provider"), tts_providers)
+
         voices = voice.get_all_azure_voices(
             filter_locals=support_locales)
         friendly_names = {
@@ -442,6 +482,26 @@ with middle_panel:
         params.voice_name = voice_name
         config.ui['voice_name'] = voice_name
 
+        if st.button(tr("Play Voice")):
+            play_content = params.video_subject
+            if not play_content:
+                play_content = params.video_script
+            if not play_content:
+                play_content = tr("Voice Example")
+            with st.spinner(tr("Synthesizing Voice")):
+                temp_dir = utils.storage_dir("temp", create=True)
+                audio_file = os.path.join(temp_dir, f"tmp-voice-{str(uuid4())}.mp3")
+                sub_maker = voice.tts(text=play_content, voice_name=voice_name, voice_file=audio_file)
+                # if the voice file generation failed, try again with a default content.
+                if not sub_maker:
+                    play_content = "This is a example voice. if you hear this, the voice synthesis failed with the original content."
+                    sub_maker = voice.tts(text=play_content, voice_name=voice_name, voice_file=audio_file)
+
+                if sub_maker and os.path.exists(audio_file):
+                    st.audio(audio_file, format="audio/mp3")
+                    if os.path.exists(audio_file):
+                        os.remove(audio_file)
+
         if voice.is_azure_v2_voice(voice_name):
             saved_azure_speech_region = config.azure.get(f"speech_region", "")
             saved_azure_speech_key = config.azure.get(f"speech_key", "")
@@ -463,10 +523,10 @@ with middle_panel:
                                       format_func=lambda x: bgm_options[x][0]  # 显示给用户的是标签
                                       )
         # 获取选择的背景音乐类型
-        bgm_type = bgm_options[selected_index][1]
+        params.bgm_type = bgm_options[selected_index][1]
 
         # 根据选择显示或隐藏组件
-        if bgm_type == "custom":
+        if params.bgm_type == "custom":
             custom_bgm_file = st.text_input(tr("Custom Background Music File"))
             if custom_bgm_file and os.path.exists(custom_bgm_file):
                 params.bgm_file = custom_bgm_file
@@ -529,8 +589,18 @@ if start_button:
         scroll_to_bottom()
         st.stop()
 
-    if not config.app.get("pexels_api_keys", ""):
+    if params.video_source not in ["pexels", "pixabay", "local"]:
+        st.error(tr("Please Select a Valid Video Source"))
+        scroll_to_bottom()
+        st.stop()
+
+    if params.video_source == "pexels" and not config.app.get("pexels_api_keys", ""):
         st.error(tr("Please Enter the Pexels API Key"))
+        scroll_to_bottom()
+        st.stop()
+
+    if params.video_source == "pixabay" and not config.app.get("pixabay_api_keys", ""):
+        st.error(tr("Please Enter the Pixabay API Key"))
         scroll_to_bottom()
         st.stop()
 
